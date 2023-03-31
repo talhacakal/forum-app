@@ -5,6 +5,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import main.Repository.AuthorizationRepository;
@@ -17,6 +18,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.util.WebUtils;
 
 import javax.crypto.SecretKey;
 import java.io.IOException;
@@ -32,14 +34,15 @@ public class JWTTokenValidatorFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        String jwt = request.getHeader(SecurityConstants.JWT_HEADER);
-        if (jwt != null) {
+
+        Cookie cookie = WebUtils.getCookie(request,"access_token");
+        if (cookie != null) {
+            String jwt = cookie.getValue();
             try {
                 SecretKey key = Keys.hmacShaKeyFor(SecurityConstants.JWT_KEY.getBytes(StandardCharsets.UTF_8));
 
                 Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(jwt).getBody();
                 String username = String.valueOf(claims.get("username"));
-//                String authoritiesString = (String) claims.get("authorities");
 
                 Collection<SimpleGrantedAuthority> authorities = new ArrayList<>();
                 this.authorizationRepository.findByUuid_Email(username).get().getRoles()
